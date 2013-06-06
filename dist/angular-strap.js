@@ -1,6 +1,6 @@
 /**
  * AngularStrap - Twitter Bootstrap directives for AngularJS
- * @version v0.7.4 - 2013-05-26
+ * @version v0.7.5 - 2013-06-06
  * @link http://mgcrea.github.com/angular-strap
  * @author Olivier Louvignes <olivier@mg-crea.com>
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -23,10 +23,17 @@ angular.module('$strap.directives').directive('bsAlert', [
       restrict: 'A',
       link: function postLink(scope, element, attrs) {
         var getter = $parse(attrs.bsAlert), setter = getter.assign, value = getter(scope);
+        var closeAlert = function closeAlertFn(delay) {
+          $timeout(function () {
+            element.alert('close');
+          }, delay * 1);
+        };
         if (!attrs.bsAlert) {
           if (angular.isUndefined(attrs.closeButton) || attrs.closeButton !== '0' && attrs.closeButton !== 'false') {
             element.prepend('<button type="button" class="close" data-dismiss="alert">&times;</button>');
           }
+          if (attrs.closeAfter)
+            closeAlert(attrs.closeAfter);
         } else {
           scope.$watch(attrs.bsAlert, function (newValue, oldValue) {
             value = newValue;
@@ -39,6 +46,10 @@ angular.module('$strap.directives').directive('bsAlert', [
               oldValue.type && element.removeClass('alert-' + oldValue.type);
               newValue.type && element.addClass('alert-' + newValue.type);
             }
+            if (angular.isDefined(newValue.closeAfter))
+              closeAlert(newValue.closeAfter);
+            else if (attrs.closeAfter)
+              closeAlert(attrs.closeAfter);
             if (angular.isUndefined(attrs.closeButton) || attrs.closeButton !== '0' && attrs.closeButton !== 'false') {
               element.prepend('<button type="button" class="close" data-dismiss="alert">&times;</button>');
             }
@@ -614,9 +625,12 @@ angular.module('$strap.directives').directive('bsSelect', [
       require: '?ngModel',
       link: function postLink(scope, element, attrs, controller) {
         var options = scope.$eval(attrs.bsSelect) || {};
-        $timeout(function () {
-          element.selectpicker(options);
-          element.next().removeClass('ng-scope');
+        element.selectpicker(options);
+        element.next().removeClass('ng-scope');
+        scope.$watch(function () {
+          return element[0].length;
+        }, function () {
+          element.selectpicker('refresh');
         });
         if (controller) {
           scope.$watch(attrs.ngModel, function (newValue, oldValue) {
@@ -699,7 +713,8 @@ angular.module('$strap.directives').directive('bsTabs', [
 'use strict';
 angular.module('$strap.directives').directive('bsTimepicker', [
   '$timeout',
-  function ($timeout) {
+  '$strapConfig',
+  function ($timeout, $strapConfig) {
     var TIME_REGEXP = '((?:(?:[0-1][0-9])|(?:[2][0-3])|(?:[0-9])):(?:[0-5][0-9])(?::[0-5][0-9])?(?:\\s?(?:am|AM|pm|PM))?)';
     return {
       restrict: 'A',
@@ -724,7 +739,7 @@ angular.module('$strap.directives').directive('bsTimepicker', [
         }
         element.attr('data-toggle', 'timepicker');
         element.parent().addClass('bootstrap-timepicker');
-        element.timepicker();
+        element.timepicker($strapConfig.timepicker || {});
         var timepicker = element.data('timepicker');
         var component = element.siblings('[data-toggle="timepicker"]');
         if (component.length) {
